@@ -51,7 +51,7 @@ Here are examples demonstrating how to use mu_log.
 
 This example shows setting up logging to use the default stdout function and logging messages at different levels.
 
-```
+```c
 #define MU_LOG_ENABLE_FORMATTED // Enable formatted logging
 #include "mu_log.h"
 #include <stdio.h> // Required for mu_log_stdout_fn and printf in sample
@@ -110,7 +110,7 @@ void handle_fatal_error() {
 If you cannot use stdout (e.g., no console) or need to send logs elsewhere (e.g. 
 UART, network, memory buffer), you can implement your own mu_log_fn as follows:
 
-```
+```c
 #define MU_LOG_ENABLE // Or MU_LOG_ENABLE_FORMATTED
 #include "mu_log.h"
 #include <string.h> // For strcmp if needed
