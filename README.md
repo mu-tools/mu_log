@@ -1,120 +1,163 @@
-Creating a master git repository that serves as a roadmap for various component modules without containing code itself is an excellent strategy for managing a large project with multiple submodules. This approach can help new users understand the project structure and dependencies at a glance and streamline navigation among various components. Here’s how to structure and consider details for such a master repository:
+# mu_log - Lightweight Logging for Embedded Systems
 
-### 1. **Structure of the Master Repository**
+`mu_log` is a simple, header-only (mostly) logging module designed for resource-constrained embedded systems. It provides configurable logging severity levels, a pluggable output mechanism, and compile-time disabling of logging features to minimize code size when not needed.
 
-**Repository Content:**
-- **README.md**: This should be the central document that explains the entire project. It includes an overview of all the modules, their purposes, how they interact, and links to their individual repositories.
-- **docs/**: A directory for more detailed documentation, such as setup instructions, architecture diagrams, use cases, etc.
-- **scripts/**: If there are common scripts useful for setting up the environment, deploying, or managing dependencies, they can be placed here.
+## Features
 
-**Submodule Links:**
-While the master repository primarily serves as a roadmap, you can optionally include each component module as a submodule. This would allow users to clone the master repository and all component modules in one go, if that fits the project’s workflow.
+* **Configurable Log Levels:** Standard severity levels (TRACE, DEBUG, INFO, WARN, ERROR, FATAL).
+* **Logging Threshold:** Set a minimum severity level to filter out less important messages.
+* **Pluggable Output:** Define your own logging function (`mu_log_fn`) to direct output to any destination (e.g., UART, console, memory buffer, network).
+* **Optional Formatting:** Compile with `MU_LOG_ENABLE_FORMATTED` to enable `printf`-style formatting using `va_list`. Otherwise, use simple string messages.
+* **Compile-Time Disabling:** Disable logging entirely by omitting `MU_LOG_ENABLE` and `MU_LOG_ENABLE_FORMATTED` defines, resulting in no-op macros and minimal code footprint.
+* **Default Output:** Provides a basic `mu_log_stdout_fn` for simple console output (requires standard I/O functions like `printf` or `fputs`).
 
-```bash
-git submodule add <url-to-Module-A> modules/A
-git submodule add <url-to-Module-B> modules/B
-git submodule add <url-to-Module-C> modules/C
-git submodule add <url-to-Module-D> modules/D
+## Configuration
+
+Logging behavior is controlled by preprocessor defines:
+
+* `MU_LOG_ENABLE`: Enables basic logging functionality. Messages are logged as simple strings (`const char*`).
+* `MU_LOG_ENABLE_FORMATTED`: Enables logging with `printf`-style formatting. This also enables basic logging. **If `MU_LOG_ENABLE_FORMATTED` is defined, `MU_LOG_ENABLE` is implicitly handled.**
+
+Define one of these symbols in your build system or before including `mu_log.h`.
+
+```c
+// In your build system (e.g., CFLAGS): -DMU_LOG_ENABLE_FORMATTED
+// OR in a common header or directly before include:
+#define MU_LOG_ENABLE_FORMATTED
+#include "mu_log.h"
 ```
 
-This setup could help in cloning everything needed with a single command and maintaining versions aligned across all modules.
+If neither define is present, all MU_LOG_ macros become no-operations, and logging code is compiled out.
+API
 
-### 2. **Documentation and Linking**
+The module provides functions and convenience macros for interacting with the logger. The macros are generally preferred for ease of use and compile-time control.
 
-**Central README:**
-- **Project Description**: Start with a high-level description of the project's goals and main features.
-- **Module Descriptions**: List each module with a brief description and its purpose within the project.
-- **Navigation Links**: Provide links to each module’s repository. If you use submodules, link to the paths within the master repository.
-- **Setup Instructions**: Include a section on how to clone the master repository and initialize its submodules (if applicable).
-- **Contribution Guidelines**: If open to contributions, outline how one can contribute to the modules, including any coding standards or requirements for pull requests.
+    mu_log_level_t: Enumeration for log levels (TRACE, DEBUG, INFO, WARN, ERROR, FATAL). MU_LOG_DEFAULT_LEVEL is INFO.
+    mu_log_fn: Function pointer type for your custom logging output function. Signature depends on MU_LOG_ENABLE_FORMATTED.
+    MU_LOG_SET_FN(fn): Set the user-defined logging function.
+    MU_LOG_SET_THRESHOLD(level): Set the minimum severity level to log.
+    MU_LOG_GET_THRESHOLD(): Get the current logging threshold.
+    MU_LOG(level, ...): Log a message with a specific level. Use level-specific macros instead.
+    MU_LOG_TRACE(...), MU_LOG_DEBUG(...), MU_LOG_INFO(...), MU_LOG_WARN(...), MU_LOG_ERROR(...), MU_LOG_FATAL(...): Convenience macros for logging at specific levels. Use these in your application code.
+    MU_LOG_WILL_LOG(level): Check if a message at the given level would currently be logged (useful for conditionally preparing expensive log messages).
+    mu_log_level_name(level): Get the string name for a log level (e.g., "INFO").
+    mu_log_stdout_fn: A provided logging function that outputs to standard output (requires <stdio.h>).
 
-**Module READMEs:**
-Each module's README should:
-- **Describe the module’s functionality and architecture**.
-- **Specify dependencies**, particularly pointing out if it depends on other modules in the project.
-- **Include a back-link** to the master repository for users who find the module in isolation but need broader context or related components.
-- **Setup and usage instructions** specific to that module.
+## Sample Usage
 
-### 3. **Version Management and Submodules**
+Here are examples demonstrating how to use mu_log.
 
-If including submodules in the master repository:
-- **Freeze Versions**: Decide on freezing submodule versions to specific tags or commits to ensure stability across all who clone the project.
-- **Updating**: Document how and when submodules should be updated, possibly including scripts or Git hooks to help maintain submodule alignment.
+### Example 1: Basic Logging with stdout
 
-### 4. **Additional Considerations**
+This example shows setting up logging to use the default stdout function and logging messages at different levels.
 
-**Integration and Testing**: Consider how changes in one module might affect others and describe integration testing strategies or continuous integration setups.
+```
+#define MU_LOG_ENABLE_FORMATTED // Enable formatted logging
+#include "mu_log.h"
+#include <stdio.h> // Required for mu_log_stdout_fn and printf in sample
 
-**Issue Tracking and Contributions**: It might be beneficial to centralize issue tracking and contribution guidelines in the master repository to manage cross-module issues and improvements cohesively.
+// Assume mu_log_stdout_fn is implemented elsewhere, maybe in mu_log.c
 
-By structuring your master repository in this manner, you create a clear and manageable framework that not only provides a thorough overview of the project but also simplifies navigation and module management for both new users and contributors.
+// In your application's initialization code (e.g., main function):
+void app_init() {
+    // Set the logging output function to the default stdout function
+    // Note: mu_log_stdout_fn is assumed to be implemented in mu_log.c
+    MU_LOG_SET_FN(mu_log_stdout_fn);
 
+    // Set the minimum level of messages to log (e.g., only log INFO, WARN, ERROR, FATAL)
+    MU_LOG_SET_THRESHOLD(MU_LOG_LEVEL_INFO);
 
+    MU_LOG_TRACE("This trace message will likely be filtered out."); // Below INFO threshold
+    MU_LOG_DEBUG("Debugging initialization step 1.");           // Below INFO threshold
+    MU_LOG_INFO("Application initialization complete.");        // INFO >= INFO - Logs
+    MU_LOG_WARN("Configuration file not found, using defaults."); // WARN >= INFO - Logs
+}
 
-Using git submodules is a good approach for managing dependencies in your software modules, especially when you want to maintain control over the specific versions of dependencies being used. Here’s how you could structure and document the setup based on your example:
+// In other parts of your application code:
+void process_data(int value) {
+    MU_LOG_DEBUG("Processing value: %d", value); // Logs only if threshold <= DEBUG
+    if (value < 0) {
+        MU_LOG_ERROR("Invalid value received: %d", value); // Logs if threshold <= ERROR
+    }
+}
 
-### 1. **Structure**
+// Example demonstrating threshold change and MU_LOG_WILL_LOG
+void demonstrate_threshold() {
+    MU_LOG_SET_THRESHOLD(MU_LOG_LEVEL_DEBUG); // Lower threshold temporarily
+    MU_LOG_DEBUG("This debug message should now appear.");
 
-**Repository Setup:**
-- **Module A and Module B**: Since these are independent, they can be set up as standalone repositories.
-- **Module C**: This repository will include Module A as a submodule.
-- **Module D**: This repository will include both Module C and Module B as submodules.
+    if (MU_LOG_WILL_LOG(MU_LOG_LEVEL_DEBUG)) {
+        // Prepare a potentially expensive debug string only if it will be logged
+        // char debug_str[64];
+        // snprintf(debug_str, sizeof(debug_str), "Complex state: %d,%s", state_val, status_str);
+        // MU_LOG_DEBUG("Expensive info: %s", debug_str);
+        MU_LOG_DEBUG("Logging is enabled for DEBUG level.");
+    }
 
-**Creating Submodules:**
-For Module C and Module D, you would add submodules using commands like:
+    MU_LOG_SET_THRESHOLD(MU_LOG_LEVEL_ERROR); // Raise threshold back
+    MU_LOG_INFO("This info message should now be suppressed."); // Below new threshold
+}
 
-```bash
-# Inside Module C repository
-git submodule add <url-to-Module-A> path/to/submodule/A
-
-# Inside Module D repository
-git submodule add <url-to-Module-C> path/to/submodule/C
-git submodule add <url-to-Module-B> path/to/submodule/B
+// In a critical error path:
+void handle_fatal_error() {
+     MU_LOG_FATAL("Unrecoverable error occurred!"); // FATAL messages always log (highest level)
+     // Perform system shutdown or reset...
+}
 ```
 
-### 2. **Usage**
+### Example 2: Custom Logging Function
 
-**Cloning Repositories with Submodules:**
-When someone needs to clone any of the repositories (e.g., Module D) that include submodules, they should use:
+If you cannot use stdout (e.g., no console) or need to send logs elsewhere (e.g. 
+UART, network, memory buffer), you can implement your own mu_log_fn as follows:
 
-```bash
-git clone --recurse-submodules <url-to-Module-D>
 ```
+#define MU_LOG_ENABLE // Or MU_LOG_ENABLE_FORMATTED
+#include "mu_log.h"
+#include <string.h> // For strcmp if needed
+#include <stdarg.h> // Required for va_list if using formatted logging
 
-This command ensures that all submodules (in this case, Module B and Module C, including Module C’s submodule Module A) are also cloned.
+// Your custom log output function
+// Signature depends on MU_LOG_ENABLE_FORMATTED
+#ifdef MU_LOG_ENABLE_FORMATTED
+int my_custom_log_output(mu_log_level_t level, const char *format, va_list ap) {
+    // Example: prefix with level name and forward to a hypothetical serial printf
+    // Be mindful of reentrancy if called from ISRs
 
-**Updating Submodules:**
-To update the submodules to their latest committed versions in their respective repositories:
+    const char *level_name = mu_log_level_name(level); // Get level string name
 
-```bash
-git submodule update --remote
+    // --- Your platform-specific output code here ---
+    // Example using hypothetical serial functions:
+    // serial_printf("%s: ", level_name);
+    // serial_vprintf(format, ap);
+    // serial_printf("\n");
+    // ---------------------------------------------
+
+    // Return number of bytes written (approximate if needed)
+    return 0;
+}
+#else // Logging without printf-style formatting using simple strings:
+int my_custom_log_output(mu_log_level_t level, const char *message) {
+    // Example: prefix with level name and forward to a hypothetical serial puts
+    const char *level_name = mu_log_level_name(level);
+
+    // --- Your platform-specific output code here ---
+    // Example using hypothetical serial functions:
+    // serial_puts(level_name);
+    // serial_puts(": ");
+    // serial_puts(message);
+    // serial_puts("\n");
+    // ---------------------------------------------
+
+    return 0; // Return number of bytes written (approximate if needed)
+}
+#endif
+
+// In your application's initialization:
+void app_init() {
+    MU_LOG_SET_FN(my_custom_log_output);
+    MU_LOG_SET_THRESHOLD(MU_LOG_LEVEL_DEBUG);
+
+    MU_LOG_INFO("Logging initialized with custom output.");
+    MU_LOG_DEBUG("Custom log message example.");
+}
 ```
-
-This command can be run from the parent module if you want to update the submodules to the latest commit available in their respective branches.
-
-### 3. **Documentation**
-
-**README Files:**
-Each repository should have a README file that includes:
-- A description of the module.
-- Instructions on how to clone the repository with submodules.
-- Information on the dependencies and how they are linked via submodules.
-
-**Version Pinning:**
-To help users "freeze" a specific release, you can check out a specific commit in the submodule:
-
-```bash
-cd path/to/submodule/A
-git checkout <specific-commit-id>
-```
-
-Then, go back to the parent repository (e.g., Module C) and commit this state, which will record the specific submodule commit.
-
-### 4. **Maintaining Submodules**
-- **Keep submodules updated**: Regularly push updates from the submodule repositories and pull these updates into the dependent repositories.
-- **Handle dependencies and versioning**: Clearly document the compatibility of versions between modules in the README or other documentation files.
-
-### 5. **Troubleshooting Common Issues**
-Provide a section in your documentation for troubleshooting common issues related to submodules, such as uninitialized submodules or difficulties updating submodules.
-
-By setting up your modules in this manner and providing clear documentation, you can effectively manage your dependencies and ensure that users have the flexibility to pin specific versions as needed.
