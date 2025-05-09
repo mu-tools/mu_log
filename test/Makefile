@@ -17,6 +17,7 @@ endif
 
 # Directories
 SRC_DIR := ../src
+INC_DIR := ../inc
 TEST_DIR := ../test
 UNITY_DIR := ../test_support
 
@@ -84,15 +85,15 @@ clean:
 # Compilation rules
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I$(SRC_DIR) $(DEPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INC_DIR) $(DEPFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/%.o: $(TEST_DIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I$(SRC_DIR) -I$(UNITY_DIR) $(DEPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INC_DIR) -I$(UNITY_DIR) $(DEPFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/%.o: $(UNITY_DIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I$(SRC_DIR) -I$(UNITY_DIR) $(DEPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INC_DIR) -I$(UNITY_DIR) $(DEPFLAGS) -c $< -o $@
 
 # Linking
 $(BIN_DIR)/test_mu_log: $(TEST_OBJS) $(SRC_OBJS) $(UNITY_OBJS)
