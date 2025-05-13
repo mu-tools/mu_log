@@ -18,6 +18,11 @@
 #define _MU_LOG_H_
 
 // *****************************************************************************
+// Includes
+
+#include <stdbool.h>
+
+// *****************************************************************************
 // C++ Compatibility
 
 #ifdef __cplusplus
@@ -25,11 +30,6 @@ extern "C" {
 #endif
 
 #if defined(MU_LOG_ENABLE) || defined(MU_LOG_ENABLE_FORMATTED) // (almost) whole file
-
-// *****************************************************************************
-// Includes
-
-#include <stdbool.h>
 
 // *****************************************************************************
 // Public types and definitions
